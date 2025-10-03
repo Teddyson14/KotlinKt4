@@ -23,4 +23,4 @@ docker-compose up
 
 ## WebSocket
 Подключение к чату: `ws://localhost:8081/chat`
-Уведомления `s://localhost:8081/notify`
+Уведомления `ws://localhost:8081/notify`
