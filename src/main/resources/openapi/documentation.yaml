@@ -1,0 +1,133 @@
+openapi: 3.0.3
+info:
+  title: Ktor Chat API
+  version: "1.0"
+servers:
+  - url: http://localhost:8080
+paths:
+  /:
+    get:
+      summary: Health / root
+      responses:
+        "200":
+          description: OK
+  /register:
+    post:
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        "200":
+          description: AuthResponse with JWT token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        "400":
+          description: Bad request / user exists
+  /user:
+    get:
+      summary: Protected endpoint for any authenticated user
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Hello user
+  /admin:
+    get:
+      summary: Protected endpoint for admin only
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Welcome admin
+  /chat:
+    get:
+      summary: WebSocket подключение к чату
+      description: |
+        Устанавливает WebSocket соединение с чатом.
+        ---
+        Протокол: `Sec-WebSocket-Protocol` или параметр `token` для передачи JWT.
+        После подключения пользователь может отправлять сообщения в формате JSON:
+        ```json
+        {
+          "type": "chat|private|notification",
+          "from": "username",
+          "to": "username",  // только для private
+          "text": "сообщение"
+        }
+        ```
+      responses:
+        "101":
+          description: Switching Protocols (успешное WebSocket подключение)
+
+  /notify:
+      post:
+        summary: Отправка уведомления пользователям
+        security:
+          - bearerAuth: [ ]
+        requestBody:
+          required: true
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WsMessage'
+        responses:
+          "200":
+            description: Уведомление отправлено
+          "403":
+            description: Доступ запрещен (только admin)
+          "404":
+            description: Пользователь не подключен
+          "400":
+            description: Некорректный формат запроса
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    WsMessage:
+      type: object
+      properties:
+        type:
+          type: string
+          description: Тип сообщения ("chat", "private", "notification", "system")
+        from:
+          type: string
+          description: Отправитель сообщения
+        to:
+          type: string
+          nullable: true
+          description: Получатель сообщения (только для private)
+        text:
+          type: string
+          description: Текст сообщения
+        ts:
+          type: integer
+          description: Временная метка (ms)
+          example: 1696320000000
+    RegisterRequest:
+      type: object
+      required:
+        - username
+        - password
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+        role:
+          type: string
+          description: "user or admin (optional, default 'user')"
+    AuthResponse:
+      type: object
+      properties:
+        token:
+          type: string
+
